@@ -1,0 +1,107 @@
+#!/bin/bash
+
+#This function install & update some orientation tools and check if nipe exist, if no then install nipe
+#that is a command that wont allow to over reinstall tools that exist
+
+function INSTALLPKG(){
+	U=$(whoami)
+	mkdir /home/$U/Documents/install
+	cd /home/$U/Documents/install
+	sudo apt update
+	sudo apt-get --assume-yes install geoip-bin
+	sudo apt-get --assume-yes install nmap
+	sudo apt-get --assume-yes install whois
+	sudo apt-get --assume-yes install sshpass
+	if [ -d nipe ]
+	then echo "nipe already exists"
+	else git clone https://github.com/htrgouvea/nipe && cd nipe && sudo cpan install Try::Tiny Config::Simple JSON && sudo perl nipe.pl install 
+	fi
+}
+INSTALLPKG
+echo
+echo
+
+#This function care about anonimity and display the status of anonimity, if yes show your'e anon.
+
+function ANON(){
+	#cd /home/$U/Documents/install && cd nipe && sudo perl nipe.pl start && sudo perl nipe.pl restart
+	P=$(curl -s ifconfig.io)
+	if [ -z $(geoiplookup $P | grep IL) ]
+	then echo "you are anonymous" 
+	else echo "you are not anonymous" 
+fi
+}
+ANON
+echo 
+echo
+
+#This function presents the current country you going through.
+
+function ANONCOUNTRY(){
+	for i in $(geoiplookup $P | awk '{print $4}' | cut -d "," -f1 )
+	do echo $i
+	done
+}
+ANONCOUNTRY
+
+#This function asking for ssh connect details (ip,username,password)
+
+function SSHDETAILS(){
+	echo "ip:" 
+	read ip
+	echo "username:"	
+	read usr 
+	echo "password:"
+	read pass 
+}
+
+#This function quite the script if the way is not anon.
+
+function ILEXIT(){
+	if [ $i == "IL" ]
+	then exit
+	else SSHDETAILS
+	fi
+}
+ILEXIT
+
+#This function connect via ssh and scans the target with nmap and whois.
+
+function SSH1(){
+	echo "what is your target ip?"
+	read target
+	sshpass -p $pass ssh $usr@$ip -o StrictHostKeyChecking=no "nmap $target > nmapinfo.txt;
+	uptime >> nmapinfo.txt;
+	curl ifconfig.io >> nmapinfo.txt;
+	hostname -I >> nmapinfo.txt;
+	whois $target > whoisinfo.txt;
+	whois $ip | grep -i country >> nmapinfo.txt"
+}
+SSH1
+
+#This function saves the info collected on the remote host.
+
+function SSH2(){
+	sshpass -p $pass ssh $usr@$ip -o StrictHostKeyChecking=no "cat nmapinfo.txt" | tail -n 300 > nmapinfo.txt
+	sshpass -p $pass ssh $usr@$ip -o StrictHostKeyChecking=no "cat whoisinfo.txt" | tail -n 300 > whoisinfo.txt 
+}
+SSH2
+
+#This function show general stat (date,int-ip,ext-ip)
+
+function  GENSTAT(){
+	date > genst.txt
+	hostname -I >>	genst.txt
+	curl ifconfig.io >> genst.txt
+}
+GENSTAT
+
+#This function collect all outputs to a full report folder.
+
+function ECHOGENSTAT(){
+	cat genst.txt > full_report.txt
+	cat nmapinfo.txt >> full_report.txt
+	cat whoisinfo.txt >> full_report.txt
+	
+}
+ECHOGENSTAT
